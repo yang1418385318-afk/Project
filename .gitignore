@@ -1,0 +1,6 @@
+.idea/
+.codegraph/
+.reasonix/
+.venv/
+**/__pycache__/
+*.pyc

@@ -1,0 +1,52 @@
+services:
+  redis_db:
+    image: redis:alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_dev_pass}
+    restart: always
+
+  mysql_db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password_123}
+      MYSQL_DATABASE: geek_oj
+    ports:
+      - "127.0.0.1:3307:3306"
+    restart: always
+
+  api_gateway:
+    build:
+      context: ./fastapi_app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis_db
+    environment:
+      - JWT_SECRET_KEY=dev-jwt-key-for-docker
+      - REDIS_PASSWORD=redis_dev_pass
+      - CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+    volumes:
+      - ./fastapi_app/main.py:/app/main.py
+    restart: always
+
+  judge_worker:
+    build:
+      context: ./django_app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis_db
+      - mysql_db
+    environment:
+      - DJANGO_DEBUG=true
+      - DJANGO_SECRET_KEY=dev-secret-key-for-docker
+      - JWT_SECRET_KEY=dev-jwt-key-for-docker
+      - MYSQL_ROOT_PASSWORD=root_password_123
+      - REDIS_PASSWORD=redis_dev_pass
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./django_app/core:/app/core
+      - ./django_app/judge:/app/judge
+      - ./django_app/manage.py:/app/manage.py
+      - ./django_app/worker.py:/app/worker.py
+    command: sh -c "python worker.py & python manage.py runserver 0.0.0.0:8000"
+    restart: always

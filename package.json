@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@guolao/vue-monaco-editor": "^1.6.0"
+  }
+}
